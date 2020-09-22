@@ -1,20 +1,10 @@
 <?php
-  # app/tests/Unit/controllers/StopWordsUnitTest.php
+  # app/tests/Unit/Models/CMSRecordsUnitTest.php
 
   use App\Models\CMSRecords;
 
   class CMSRecordsUnitTest extends BrowserKitTestCase
   {
-
-    public function setUp(): void {
-         parent::setUp();
-         Artisan::call('migrate:refresh --seed');
-    }
-
-    protected function tearDown(): void {
-         Artisan::call('migrate:reset');
-         parent::tearDown();
-    }
 
     public function testIsCMSRecord() {
          $this->assertFalse(CMSRecords::isCMSRecord('A1'));

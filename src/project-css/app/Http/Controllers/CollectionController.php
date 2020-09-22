@@ -1,14 +1,19 @@
 <?php
-/**
- * @author Ajay Krishna Teja Kavur
- * @author Tracy A McCormick <tam0013@mail.wvu.edu>
- */
 
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Collection;
+use App\Models\Table;
+use App\Helpers\CollectionHelper;
 
+/**
+ * The controller is responsible for showing, editing and updating the collection(s)
+ * 
+ * @author Ajay Krishna Teja Kavur
+ * @author Tracy A McCormick <tam0013@mail.wvu.edu>
+ */
 class CollectionController extends Controller
 {
   /**
@@ -20,28 +25,30 @@ class CollectionController extends Controller
 
   // Customize the error messages
   private $messages = array(
-      'clctnName.required' => 'Please enter a collection name',
-      'clctnName.unique' => 'The collection name has already been taken by current or disabled collection',
-      'clctnName.max' => 'The collection name cannot exceed 30 characters',
-      'clctnName.min' => 'The collection name should be 6 characters or more',
-      'clctnName.alpha_num' => 'The collection name can only have alphab',
-    );
+    'clctnName.required' => 'Please enter a collection name',
+    'clctnName.unique' => 'The collection name has already been taken by current or disabled collection',
+    'clctnName.max' => 'The collection name cannot exceed 30 characters',
+    'clctnName.min' => 'The collection name should be 6 characters or more',
+    'clctnName.alpha_num' => 'The collection name can only have alphab',
+  );
 
   // Rules for validation
   private $rules = array(
-      'clctnName' => 'required|unique:collections|max:30|min:6|alpha_num',
-    );
+    'clctnName' => 'required|unique:collections|max:30|min:6|alpha_num',
+  );
 
   /**
    * Create a new controller instance.
+   *
+   * @return void
    */
   public function __construct()
   {
-      $this->middleware('admin');
+      $this->middleware('admin'); 
   }
 
   /**
-   * Display a listing of the resource.
+   * Display the main collection index page listing all collections.
    * 
    * @return \Illuminate\Http\Response
    */
@@ -52,47 +59,145 @@ class CollectionController extends Controller
   }
 
   /**
-  * Takes request validates the collection name and saves new collection to database
-  */
+   * Display a collection and the associated tables.
+   *
+   * @param integer $colID - collection id
+   *        
+   * @author Tracy A McCormick  
+   * @return \Illuminate\Http\Response
+   */       
+  public function show($colID) {
+    // find the collection
+    $thisClctn = Collection::findorFail($colID);  
+
+    // Get all the tables of this collection
+    $tbls = $thisClctn->tables()->get();
+
+    // render collection/show page with array of tables
+    // current collection id and name of collection
+    return view('collection/show')->with('tbls', $tbls)
+                                  ->with('colID', $colID)
+                                  ->with('clctnName', $thisClctn->clctnName);
+  }   
+  
+  /**
+   * Generates response containing the collection/upload
+   * page that will be shown.
+   *
+   * @param request $request
+   *        
+   * @author Tracy A McCormick 
+   * @return \Illuminate\Http\Response (redirect to wizard import)
+   */ 
+  public function upload($colID) {
+    // find the collection
+    $thisClctn = Collection::findorFail($colID);  
+
+    // render collection/upload page with current collection id 
+    // and name of collection
+    return view('collection/upload')->with('colID', $colID)
+                                    ->with('clctnName', $thisClctn->clctnName);
+  }   
+
+  /**
+   * Takes request validates the collection name and saves new collection to database
+   *
+   * @param request $request
+   *        
+   * @author Tracy A McCormick 
+   * @return \Illuminate\Http\Response ( redirect to collection index )
+   */ 
   public function create(Request $request) {
     // Validate the request before storing the data
     $this->validate($request, $this->rules, $this->messages);
 
-    // Create the collection name
-    $thisClctn = new Collection;
-    $thisClctn->clctnName = $request->clctnName;
-    $thisClctn->save();
+    // Get required fields for collection and set them
+    // in the $data array to be passed to the create
+    // function.
+    $data = [
+        'isCms' => $request->has('isCms') ? true : false,
+        'name' => $request->clctnName
+    ];
 
-    // Take the form object and insert using model
-    // Used a named route for better redirection
+    // Using Collection Helper Create a new collection
+    (new CollectionHelper)->create($data);
+
+    // return a redirect response to a named route 
+    // for better redirection
     return redirect()->route('collection.index');
   }
 
   /**
-  * Takes request validates the updated collection name and then updates the database
-  */
+   * Takes request gets collection id and redirects
+   * to the wizard import page for the specified collection
+   *
+   * @param request $request
+   *        
+   * @author Tracy A McCormick 
+   * @return \Illuminate\Http\Response ( redirect to wizard import )
+   */  
+  public function tableCreate(Request $request) {
+    // return a redirect response to import wizard 
+    // route with collection id
+    return redirect('admin/wizard/import/collection/'.$request->colID);
+  }
+
+  /**
+   * Takes request validates the updated collection name and then updates the database
+   *
+   * @param request $request
+   *        
+   * @author Tracy A McCormick 
+   * @return \Illuminate\Http\Response ( redirect back to collection page after edit )
+   */
   public function edit(Request $request) {
-    // Validate the request before storing the data
-    $this->validate($request, $this->rules, $this->messages);
-
-    // Create the collection name
+    // find the collection
     $thisClctn = Collection::findorFail($request->id);
-    $thisClctn->clctnName = $request->clctnName;
-    $thisClctn->save();
 
-    // Take the form object and insert using model
+    // update isCms field if the collection name hasn't changed
+    if ($thisClctn->clctnName == $request->clctnName) {
+      // Set isCms
+      $thisClctn->isCms = $request->has('isCms') ? true : false;
+
+      // Save Updated items
+      $thisClctn->save();
+    }
+    else {
+      // Validate the request before storing the data
+      $this->validate($request, $this->rules, $this->messages);
+
+      // Get required fields for collection and set them
+      // in the $data array to be passed to the update
+      // function.
+      $data = [
+          'isCms' => $request->has('isCms') ? true : false,
+          'id' => $request->id,
+          'name' => $request->clctnName
+      ];
+
+      // Using Collection Helper Update collection
+      $result = (new CollectionHelper)->update($data);
+    }
+
+    // return a redirect response to collection index 
+    // page using named route   
     return redirect()->route('collection.index');
   }
 
   /**
-  * Sets the the state of the collection to disabled and updates database
-  */
+   * Sets the the state of the collection to disabled and updates database
+   *
+   * @param request $request
+   *        
+   * @author Tracy A McCormick 
+   * @return \Illuminate\Http\Response ( redirect back to collection page after disable )
+   */
   public function disable(Request $request) {
     // find the collection
     $thisClctn = Collection::findorFail($request->id);
     
     if (strcasecmp($thisClctn->clctnName, $request->clctnName) == 0) {
-      $this->updateCollectionFlag($request->id, false);
+      (new CollectionHelper)->updateCollectionFlag($request->id, false);
 
       // Take the form object and insert using model
       return redirect()->route('collection.index');
@@ -103,43 +208,17 @@ class CollectionController extends Controller
   }
 
   /**
-  * Sets the the state of the collection to enabled and updates database
-  */
+   * Sets the the state of the collection to enabled and updates database
+   *
+   * @param request $request
+   *        
+   * @author Tracy A McCormick    
+   * @return \Illuminate\Http\Response ( redirect back to collection page after enable )
+   */
   public function enable(Request $request) {
-    $this->updateCollectionFlag($request->id, true);
+    (new CollectionHelper)->updateCollectionFlag($request->id, true);
 
     return redirect()->route('collection.index');
-  }
-
-  /**
-  * Sets the the state of the collection to the value in $flag
-  * then calls updateTableAccess to update all tables in the 
-  * collection
-  */
-  private function updateCollectionFlag($id, $flag) {
-    // Create the collection name
-    $thisClctn = Collection::findorFail($id);
-
-    // Updated all Tables in collection
-    $this->updateTableAccess($thisClctn, $flag);
-
-    # enable the collection
-    $thisClctn->isEnabled = $flag;
-    $thisClctn->save();
-  }
-
-  /**
-  * Sets hasAccess on all tables in collection
-  */  
-  private function updateTableAccess($collection, $access) {
-    // Get all the tables of this collection
-    $thisClctnTbls = $collection->tables()->get();
-
-    // Update all the tables of this collection
-    foreach ($thisClctnTbls as $tbl) {
-      $tbl->hasAccess = $access;
-      $tbl->save();
-    }
   }
 
 }

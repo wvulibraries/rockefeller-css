@@ -50,7 +50,7 @@ return [
             'driver' => 'sqlite',
             'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'prefix' => '',
-        ],
+        ],   
 
         'mysql' => [
             'driver' => 'mysql',
@@ -64,7 +64,7 @@ return [
             'prefix' => '',
             'strict' => false,
             'engine' => null,
-        ],
+        ],     
 
         'pgsql' => [
             'driver' => 'pgsql',

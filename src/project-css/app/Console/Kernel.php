@@ -14,7 +14,20 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         //
-        Commands\exportData::class,
+        Commands\exportTable::class,
+        Commands\importTable::class,
+        Commands\dropTable::class,
+        Commands\renameTable::class,
+        Commands\truncateTable::class,
+        Commands\createCollection::class,
+        Commands\renameCollection::class, 
+        Commands\enableCollection::class, 
+        Commands\disableCollection::class,                        
+        Commands\deleteCollection::class,
+        Commands\unsetCmsCollection::class,
+        Commands\setCmsCollection::class,
+        Commands\createSrchIndex::class,
+        Commands\optimizeSrchIndex::class,  
     ];
 
     /**

@@ -17,7 +17,8 @@
 
 <!-- Dashboard cards -->
 <div class="container cardsWrapper" role="main">
-  <div class="row">
+  <div id="access" class="row">
+
     <a href="{{ url('/users') }}">
       <div class="col-xs-12 col-sm-6 col-md-3">
         <div class="well dashCard">
@@ -34,7 +35,8 @@
           </div>
         </div>
       </div>
-    </a>
+    </a> 
+
     <a href="{{ url('/collection') }}">
       <div class="col-xs-12 col-sm-6 col-md-3">
         <div class="well dashCard">
@@ -52,6 +54,7 @@
         </div>
       </div>
     </a>
+
     <a href="{{ url('table') }}">
       <div class="col-xs-12 col-sm-6 col-md-3">
         <div class="well dashCard">
@@ -69,6 +72,8 @@
         </div>
       </div>
     </a>
+   
+
     <div class="col-xs-12 col-sm-6 col-md-3">
       <div class="well dashCard">
         <div class="dashCardHeading">
@@ -84,6 +89,8 @@
         </div>
       </div>
     </div>
-</div>
+
+  </div> 
+
 </div>
 @endsection

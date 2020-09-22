@@ -44,14 +44,23 @@
           <div class="col-xs-6 col-sm-8 col-md-8">
             <!-- Option 1 Add tables -->
             <div class="colCardOpts">
-              <a href="{{url('table/create')}}">
+              <a href="{{url('/collection/'. $collcntNm->id . '/table/create') }}">
                 <div class="icon hidden-xs hidden-sm">
                   <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
                 </div>
                 <p>Add Tables</p>
               </a>
+            </div>          
+            <!-- Option 2 Show tables -->
+            <div class="colCardOpts">
+              <a href="{{url('collection/show',['cmsID' => $collcntNm->id])}}">
+                <div class="icon hidden-xs hidden-sm">
+                  <span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+                </div>
+                <p>Show</p>
+              </a>
             </div>
-            <!-- Option 2 Edit Collection -->
+            <!-- Option 3 Edit Collection -->
             <div class="colCardOpts">
               <a href="#" data-toggle="modal" data-target="#editCllctn{{$collcntNm->id}}">
                 <div class="icon hidden-xs hidden-sm">
@@ -60,7 +69,7 @@
                 <p>Edit</p>
               </a>
             </div>
-            <!-- Option 3 Disable Collection -->
+            <!-- Option 4 Disable Collection -->
             <div class="colCardOpts">
               <a href="#" data-toggle="modal" data-target="#dsbleCllctn{{$collcntNm->id}}">
                 <div class="icon hidden-xs hidden-sm">
@@ -93,10 +102,21 @@
                   <input id="clctnEditId_{{$key}}" name="id" type="hidden" value="{{$collcntNm->id}}" />
 
                   <div class="form-group{{ $errors->has('clctnName') ? ' has-error' : '' }}">
-                    <div class="col-md-6">
-                      <span for="clctnEditName_{{$key}}" class="control-label">Collection Name</span>
-                      <input id="clctnEditName_{{$key}}" type="text" aria-label="Enter Collection Name" class="form-control" name="clctnName" value="{{$collcntNm->clctnName}}" required autofocus>
-                    </div>
+                      <label for="clctnEditName_{{$key}}" class="col-md-4 control-label">Collection Name</label>
+
+                      <div class="col-md-6">
+                          <input id="clctnEditName_{{$key}}" type="text" aria-label="Enter Collection Name" class="form-control" name="clctnName" value="{{$collcntNm->clctnName}}" required autofocus>
+                      </div>
+                  </div>              
+
+                  <div class="form-group">
+                      <div class="col-md-6 col-md-offset-4">
+                          <div class="checkbox">
+                              <label>
+                                  <input id="clctnEditisCms_{{$key}}" type="checkbox" name="isCms" {{ $collcntNm->isCms==1 ? 'checked="checked"' : '' }}> is CMS
+                              </label>
+                          </div>
+                      </div>
                   </div>
 
                   <div class="modal-footer">
@@ -226,12 +246,22 @@
           <div class="modal-body">
             <form class="form-horizontal" name="clctnCreate" aria-label="clctnCreate" role="form" method="POST" action="{{ url('collection/create') }}">
                 {{ csrf_field() }}
-
                 <div class="form-group{{ $errors->has('clctnName') ? ' has-error' : '' }}">
-                  <div class="col-md-12">
-                    <label for="clctnCreateName" class="control-label">Collection Name</label>
-                    <input id="clctnCreateName" type="text" class="form-control" name="clctnName" required autofocus>
-                  </div>
+                    <label for="clctnCreateName" class="col-md-4 control-label">Collection Name</label>
+
+                    <div class="col-md-6">
+                        <input id="clctnCreateName" type="text" class="form-control" name="clctnName" required autofocus>
+                    </div>
+                </div>              
+
+                <div class="form-group">
+                    <div class="col-md-6 col-md-offset-4">
+                        <div class="checkbox">
+                            <label>
+                                <input id="clctnCMS" type="checkbox" name="isCms"> is CMS
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="modal-footer">

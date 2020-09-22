@@ -7,18 +7,12 @@
 
     public function setUp(): void {
          parent::setUp();
-         Artisan::call('migrate');
 
-         \DB::insert('insert into collections (clctnName, isEnabled, hasAccess) values(?, ?, ?)',['collection1', true, true]);
+         \DB::insert('insert into collections (clctnName, isEnabled, hasAccess) values(?, ?, ?)',[$this->testHelper->generateCollectionName(), true, true]);
 
          //insert record into table for testing
-         \DB::insert('insert into tables (tblNme, collection_id, hasAccess) values(?, ?, ?)',['testtable1', 1, true]);
-         \DB::insert('insert into tables (tblNme, collection_id, hasAccess) values(?, ?, ?)',['testtable2', 1, false]);
-    }
-
-    protected function tearDown(): void {
-         Artisan::call('migrate:reset');
-         parent::tearDown();
+         \DB::insert('insert into tables (tblNme, collection_id, hasAccess) values(?, ?, ?)',[$this->testHelper->createTableName(), 1, true]);
+         \DB::insert('insert into tables (tblNme, collection_id, hasAccess) values(?, ?, ?)',[$this->testHelper->createTableName(), 1, false]);
     }
 
     public function testIsValidTable() {

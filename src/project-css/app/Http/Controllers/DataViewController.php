@@ -1,8 +1,4 @@
 <?php
-/**
- * @author Ajay Krishna Teja Kavur
- * @author Tracy A McCormick <tam0013@mail.wvu.edu>
- */
 
 namespace App\Http\Controllers;
 
@@ -10,13 +6,16 @@ use Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Table;
-use App\Libraries\CustomStringHelper;
-use App\Libraries\FileViewHelper;
 use App\Libraries\FullTextSearchFormatter;
-use App\Libraries\TableHelper;
+use App\Helpers\CustomStringHelper;
+use App\Helpers\FileViewHelper;
+use App\Helpers\TableHelper;
 
 /**
  * The controller is responsible for showing the cards data
+ * 
+ * @author Ajay Krishna Teja Kavur
+ * @author Tracy A McCormick <tam0013@mail.wvu.edu>
  */
 class DataViewController extends Controller {
     // various error messages
@@ -35,7 +34,12 @@ class DataViewController extends Controller {
 
     /**
      * Show the data from the selected table
-     */
+     * 
+     * @param string $curTable - id of the table
+     *        
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response ( returns a view of records with pagination (30 records at a time) )
+     */      
     public function index($curTable) {
         $table = Table::findOrFail($curTable);
 
@@ -53,7 +57,13 @@ class DataViewController extends Controller {
 
     /**
      * Show a record in the table
-     */
+     * 
+     * @param string $curTable - id of the table
+     * @param integer $curId - the record id 
+     *        
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response ( returns a view showing requested record )
+     */      
     public function show($curTable, $curId) {
         // Check if id is valid
         if (is_null($curId) || !is_numeric($curId)) {
@@ -77,9 +87,17 @@ class DataViewController extends Controller {
                                 ->with('curId', $curId);
     }
 
-     /**
-     * Show a record in the table
-     */   
+    /**
+     * Uses Mysql full text search to query the database table
+     * function returns results 30 records at a time.
+     * 
+     * @param request $request
+     * @param string $curTable - id of the table
+     * @param integer $page - page number to be displayed 
+     *        
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response (returns a view with found records)
+     */       
     public function search(Request $request, $curTable, $page = 1) {
         // Get the table entry in meta table "tables"
         $table = Table::findOrFail($curTable);
@@ -130,7 +148,14 @@ class DataViewController extends Controller {
      * will run ssnRedact to replace a US style social security number with
      * ###-##-####. Any other files the user will be able to download and then
      * view with a local application.
-     */
+     * 
+     * @param string $curTable - id of the table
+     * @param integer $recId - the record id 
+     * @param string $filename - requested file to be viewed
+     *        
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response ( generated view or generates a response to display raw file )
+     */  
     public function view($curTable, $recId, $filename) {
         // Get the table entry in meta table "tables"
         $table = Table::findOrFail($curTable);
@@ -147,7 +172,8 @@ class DataViewController extends Controller {
                                         ->with('recId', $recId);
         }
 
-        // download file if tika doesn't support the conversion to text
+        // download file so user can view if tika doesn't support 
+        // the conversion to text
         return Response::make(file_get_contents($source), 200, [
            'Content-Type' => $fileMimeType,
            'Content-Disposition' => 'inline; filename="'.$filename.'"'

@@ -1,8 +1,4 @@
 <?php
-/**
- * @author Ajay Krishna Teja Kavur
- * @author Tracy A McCormick <tam0013@mail.wvu.edu>
- */
 
 namespace App\Http\Controllers;
 
@@ -11,6 +7,13 @@ use App\Models\User;
 use App\Models\Table;
 use Auth;
 
+/**
+ * Home Controller renders main page and home page
+ * for admin and users.
+ * 
+ * @author Ajay Krishna Teja Kavur
+ * @author Tracy A McCormick <tam0013@mail.wvu.edu>
+ */
 class HomeController extends Controller {
     /**
      * Create a new controller instance.
@@ -22,6 +25,7 @@ class HomeController extends Controller {
     /**
      * Show the application dashboard.
      *
+     * @author Tracy A McCormick
      * @return \Illuminate\Http\Response
      */
     public function index() {
@@ -32,6 +36,7 @@ class HomeController extends Controller {
     /**
      * Show the application dashboard for user.
      *
+     * @author Tracy A McCormick
      * @return \Illuminate\Http\Response
      */    
     private function showUserView() {
@@ -50,21 +55,16 @@ class HomeController extends Controller {
     /**
      * Show the application dashboard for admin.
      *
+     * @author Tracy A McCormick
      * @return \Illuminate\Http\Response
      */    
     private function showAdminView() {
-        // Get the count of variables
-        $cllctCnt = Collection::all()->count();
-        $usrCnt = User::where('isAdmin', false)->count();
-        $admnCnt = User::where('isAdmin', true)->count();
-        $tblCnt = Table::all()->count();
-
-        // Compact them into array
+        // Create stats array that is passed to the view
         $stats = array(
-            'cllctCnt' => $cllctCnt,
-            'usrCnt' => $usrCnt,
-            'admnCnt' => $admnCnt,
-            'tblCnt' => $tblCnt,
+            'cllctCnt' => Collection::all()->count(),
+            'usrCnt' => User::where('isAdmin', false)->count(),
+            'admnCnt' => User::where('isAdmin', true)->count(),
+            'tblCnt' => Table::all()->count(),
         );
 
         // Return the view

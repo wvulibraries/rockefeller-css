@@ -12,8 +12,13 @@
     private $admin;
     private $user;
     private $tblname;
+    private $collection;
+
     private $path;
     private $file;
+    
+    // location of test files
+    private $filePath = './storage/app';
 
     /**
     * @var \Illuminate\Session\SessionManager
@@ -21,222 +26,165 @@
     protected $manager;
 
     public function setUp(): void {
-           parent::setUp();
-           Artisan::call('migrate:fresh --seed');
-           Session::setDefaultDriver('array');
-           $this->manager = app('session');
+       parent::setUp();
+       Session::setDefaultDriver('array');
+       $this->manager = app('session');
 
-           // find admin and test user accounts
-           $this->admin = User::where('name', '=', 'admin')->first();
-           if($this->admin == null){
-              $this->fail('No admin user present');
-           }
+       // find admin and test user accounts
+       $this->admin = User::where('name', '=', 'admin')->first();
+       if($this->admin == null){
+         $this->fail('No admin user present');
+       }
 
-           $this->user = User::where('name', '=', 'test')->first();
-           if($this->user == null){
-              $this->fail('No user present');
-           }
-    }
-
-    public function cleanup() {
-           if ($this->file != NULL) {
-              // cleanup remove header_only.csv from upload folder
-              Storage::delete('/flatfiles/'.$this->file);
-           } 
-
-           if ($this->tblname != NULL) {
-              // cleanup remove directory for the test table
-              Storage::deleteDirectory($this->tblname);
-
-              // drop table after Testing
-              Schema::drop($this->tblname);
-           }
+       $this->user = User::where('name', '=', 'test')->first();
+       if($this->user == null){
+         $this->fail('No user present');
+       }
     }
 
     protected function tearDown(): void {
-           $this->cleanup($this->tblname, $this->file);
+       // test tables, files and folders that were created
+       $this->testHelper->cleanupTestTables();
 
-           Artisan::call('migrate:rollback');
-           parent::tearDown();
-    }
+       // Delete Test Collections
+       $this->testHelper->deleteTestCollections();         
 
-    public function createTestTable($path = './storage/app/files/test/', $file = 'test.dat') {
-            $this->tblname = 'importtest'.mt_rand();
-            $this->path = $path;
-            $this->file = $file;
+       parent::tearDown();
+   }   
 
-            // create a test collection
-            $this->testHelper->createCollection('collection1');
-            $this->actingAs($this->admin)
-                 ->visit('table/create')
-                 ->see('collection1')
-                 ->type($this->tblname, 'imprtTblNme')
-                 ->type('1', 'colID')
-                 ->attach($this->path . $this->file, 'fltFile')
-                 ->press('Import')
-                 ->assertResponseStatus(200)
-                 ->see('Edit Schema')
-                 ->submitForm('Submit', [ 'col-0-data' => 'string', 'col-0-size' => 'default',
-                                         'col-1-data' => 'string', 'col-1-size' => 'default',
-                                         'col-2-data' => 'string', 'col-2-size' => 'default',
-                                         'col-3-data' => 'string', 'col-3-size' => 'default',
-                                         'col-4-data' => 'string', 'col-4-size' => 'default',
-                                         'col-5-data' => 'string', 'col-5-size' => 'default',
-                                         'col-6-data' => 'string', 'col-6-size' => 'default',
-                                         'col-7-data' => 'string', 'col-7-size' => 'default',
-                                         'col-8-data' => 'string', 'col-8-size' => 'default',
-                                         'col-9-data' => 'string', 'col-9-size' => 'default',
-                                         'col-10-data' => 'string', 'col-10-size' => 'default',
-                                         'col-11-data' => 'string', 'col-11-size' => 'default',
-                                         'col-12-data' => 'string', 'col-12-size' => 'default',
-                                         'col-13-data' => 'string', 'col-13-size' => 'default',
-                                         'col-14-data' => 'string', 'col-14-size' => 'default',
-                                         'col-15-data' => 'string', 'col-15-size' => 'default',
-                                         'col-16-data' => 'string', 'col-16-size' => 'default',
-                                         'col-17-data' => 'string', 'col-17-size' => 'default',
-                                         'col-18-data' => 'string', 'col-18-size' => 'default',
-                                         'col-19-data' => 'string', 'col-19-size' => 'default',
-                                         'col-20-data' => 'string', 'col-20-size' => 'big',
-                                         'col-21-data' => 'text', 'col-21-size' => 'default',
-                                         'col-22-data' => 'text', 'col-22-size' => 'default',
-                                         'col-23-data' => 'string', 'col-23-size' => 'default',
-                                         'col-24-data' => 'string', 'col-24-size' => 'default',
-                                         'col-25-data' => 'string', 'col-25-size' => 'default',
-                                         'col-26-data' => 'string', 'col-26-size' => 'default',
-                                         'col-27-data' => 'string', 'col-27-size' => 'default',
-                                         'col-28-data' => 'string', 'col-28-size' => 'big',
-                                         'col-29-data' => 'text', 'col-29-size' => 'default',
-                                         'col-30-data' => 'text', 'col-30-size' => 'default',
-                                         'col-31-data' => 'string', 'col-31-size' => 'default' ])
-                 ->assertResponseStatus(200)
-                 ->see('Load Data')
-                 ->press('Load Data')
-                 ->see('Table(s)')
-                 ->assertResponseStatus(200);
+   public function createTestTable() {
+       $this->path = './storage/app/files/test/';
+       $this->file = 'test.dat';
 
-              // tests running too fast let job queue import
-              sleep(5);  
+        // Create Test Collection        
+        $this->collection = $this->testHelper->createCollection(time(), 1, false);
+
+        // Create Test Table
+        $this->tblname = $this->testHelper->createTestTable($this->collection, $this->file);       
+
+       // tests running too fast let job queue import
+       sleep(5);  
     }
 
     public function testInvalidId() {
-           $this->createTestTable();
+       $this->createTestTable();
 
-           // view specific record with a invalid id
-           // should produce error messsage that no results
-           $this->actingAs($this->admin)
-                ->visit('data/1/2000')
-                ->assertResponseStatus(200)
-                ->see('Search Yeilded No Results');
+       // view specific record with a invalid id
+       // should produce error messsage that no results
+       $this->actingAs($this->admin)
+            ->visit('table')
+            ->see($this->tblname)
+            ->visit('data/1/2000')
+            ->assertResponseStatus(200)
+            ->see('Search Yeilded No Results');
     }    
 
     public function testIndexWithInvalidTable() {
-           //try to import a table without a collection
-           $this->actingAs($this->admin)
-                ->visit('data/1')
-                ->see("Table id is invalid");
+       //try to import a table without a collection
+       $this->actingAs($this->admin)
+            ->visit('data/1')
+            ->see("Table id is invalid");
 
-           // test using non-numeric table id
-           $this->actingAs($this->admin)
-                ->visit('data/idontexist')
-                ->see("Table id is invalid");
+       // test using non-numeric table id
+       $this->actingAs($this->admin)
+            ->visit('data/idontexist')
+            ->see("Table id is invalid");
     }
 
     public function testImportWithRecords() {
-           $this->createTestTable();
+       $this->createTestTable();
 
-           // verify we can see table in the table list
-           $this->actingAs($this->admin)
-                ->visit('table')
-                ->assertResponseStatus(200)
-                ->see($this->tblname);
+       // verify we can see table in the table list
+       $this->actingAs($this->admin)
+              ->visit('table')
+              ->assertResponseStatus(200)
+              ->see($this->tblname);
 
-           // verify we can get to table
-           $this->actingAs($this->admin)
-                ->visit('data/1')
-                ->assertResponseStatus(200);
+       // verify we can get to table
+       $this->actingAs($this->admin)
+              ->visit('data/1')
+              ->assertResponseStatus(200);
 
-           $this->actingAs($this->admin)
-                ->visit('data/1/1')
-                ->assertResponseStatus(200);
+       $this->actingAs($this->admin)
+              ->visit('data/1/1')
+              ->assertResponseStatus(200);
 
-           $this->actingAs($this->admin)
-                ->visit('data/1')
-                ->see('Doe');       
+       $this->actingAs($this->admin)
+              ->visit('data/1')
+              ->see('Doe'); 
     }
 
     public function uploadFileToDatabaseAndView($upload) {
-            $this->createTestTable();
+       $this->createTestTable();
 
-            $this->actingAs($this->admin)
-                 ->visit('upload/1')
-                 ->assertResponseStatus(200)
-                 ->see('Upload files to '.$this->tblname.' Table')
-                 ->type('test', 'upFldNme')
-                 ->attach(array($this->path.$upload), 'attachments[]')
-                 ->press('Upload')
-                 ->assertResponseStatus(200)
-                 ->see('Upload files to '.$this->tblname.' Table')
-                 ->assertFileExists(storage_path('app/'.$this->tblname.'/test/'.$upload));
+       $this->actingAs($this->admin)
+              ->visit('upload/1')
+              ->assertResponseStatus(200)
+              ->see('Upload files to ' . $this->collection->clctnName . ' Collection')
+              ->type('test', 'upFldNme')
+              ->attach(array($this->path.$upload), 'attachments[]')
+              ->press('Upload')
+              ->assertResponseStatus(200)
+              ->see('Upload files to ' . $this->collection->clctnName . ' Collection')
+              ->assertFileExists(storage_path('app/'.$this->collection->clctnName.'/test/'.$upload));
 
-            $this->visit('data/1/1/view'.'/test/'.$upload)
-                 ->assertResponseStatus(200);
+       $this->visit('data/1/1/view'.'/test/'.$upload)
+              ->assertResponseStatus(200);
     }
 
     public function testUploadAndViewUploadedTxtFile() {
-           $this->uploadFileToDatabaseAndView('test_upload.txt');
+       $this->uploadFileToDatabaseAndView('test_upload.txt');
     }
 
     public function testUploadAndViewUploadedDocFile() {
-           $this->uploadFileToDatabaseAndView('test_upload.doc');
+       $this->uploadFileToDatabaseAndView('test_upload.doc');
     }
 
     public function testUploadAndViewUploadedDocxFile() {
-           $this->uploadFileToDatabaseAndView('test_upload.docx');
+       $this->uploadFileToDatabaseAndView('test_upload.docx');
     }
 
     public function testUploadAndViewUploadedPdfFile() {
-           $this->uploadFileToDatabaseAndView('test_upload.pdf');
+       $this->uploadFileToDatabaseAndView('test_upload.pdf');
     }
 
     public function testUploadAndViewUploadedPngFile() {
-           $this->uploadFileToDatabaseAndView('images.png');
-    }
+       $this->uploadFileToDatabaseAndView('images.png');
+   }
 
     public function testViewInvalidRecord() {
-           $this->createTestTable();
+       $this->createTestTable();
 
-           // view specific record with a invalid id
-           // should produce error messsage that no results
-           $this->actingAs($this->admin)
-                ->visit('data/1/2000')
-                ->assertResponseStatus(200)
-                ->see('Search Yeilded No Results');
-
+       // view specific record with a invalid id
+       // should produce error messsage that no results
+       $this->actingAs($this->admin)
+              ->visit('data/1/2000')
+              ->assertResponseStatus(200)
+              ->see('Search Yeilded No Results');
     }
 
     public function testImportWithNoRecords() {
-           $path = './storage/app/files/test/';
-           $file = 'header_only.dat';
+       $path = './storage/app/files/test/';
+       $file = 'header_only.dat';
 
-           $this->createTestTable($path, $file);
+       $this->createTestTable($path, $file);
 
-           $this->actingAs($this->admin)
-                ->visit('table')
-                ->assertResponseStatus(200)
-                ->see('0');
+       $this->actingAs($this->admin)
+              ->visit('table')
+              ->assertResponseStatus(200)
+              ->see('0');
 
-           // visit a table with no records
-           $this->visit('data/1')
-                ->assertResponseStatus(200)
-                ->see('Table does not have any records.');
-
+       // visit a table with no records
+       $this->visit('data/1')
+              ->assertResponseStatus(200)
+              ->see('Table does not have any records.');
     }
 
     public function testNullShow() {
-           // test to see if passing null for both table id and record produces a error response
-           $response = (new DataViewController)->show(null, null);
-           $errors = $response->getSession()->get('errors', new Illuminate\Support\MessageBag)->all();
-           $this->assertEquals($errors[0], "Invalid Record ID");
+       // test to see if passing null for both table id and record produces a error response
+       $response = (new DataViewController)->show(null, null);
+       $errors = $response->getSession()->get('errors', new Illuminate\Support\MessageBag)->all();
+       $this->assertEquals($errors[0], "Invalid Record ID");
     }
 
   }

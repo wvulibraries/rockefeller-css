@@ -4,334 +4,238 @@
     use Illuminate\Support\Facades\Storage;
     use App\Http\Controllers\TableController;
     use App\Http\Controllers\DataViewController;
-
+    use App\Helpers\CollectionHelper;
+    use App\Helpers\TableHelper;
     use App\Models\User;
     use App\Models\Table;
 
     class TableControllerTest extends BrowserKitTestCase {
+     private $admin;
+     private $user;
+     private $collection;
+     public $tableHelper;
+     public $collectionHelper;
 
-    private $admin;
-    private $user;
-    private $collection;
+     // location of test files
+     private $filePath = './storage/app';
 
-    public function setUp(): void {
-           parent::setUp();
-           Artisan::call('migrate:refresh --seed');
+     private $colName;
+     private $colName2;
+     private $tableName;       
 
-           // find admin and test user accounts
-           $this->admin = User::where('name', '=', 'admin')->first();
-           $this->user = User::where('name', '=', 'test')->first();
-    }
+     public function setUp(): void {
+          parent::setUp();
 
-    protected function tearDown(): void {
-           Artisan::call('migrate:reset');
-           parent::tearDown();
-    }
+          // find admin and test user accounts
+          $this->admin = User::where('name', '=', 'admin')->first();
+          $this->user = User::where('name', '=', 'test')->first();
 
-    public function createTestTable($tblname, $path, $file) {
-           $this->testHelper->createCollection('collection1');
+          // init helpers
+          $this->tableHelper = new TableHelper;  
+          $this->collectionHelper = new CollectionHelper;
 
-           $this->actingAs($this->admin)
-                ->visit('table/create')
-                ->type($tblname, 'imprtTblNme')
-                ->type('1', 'colID')
-                ->attach($path . $file, 'fltFile')
-                ->press('Import')
-                ->assertResponseStatus(200)
-                ->see('Edit Schema')
-                ->submitForm('Submit', [ 'col-0-data' => 'string', 'col-0-size' => 'default',
-                                       'col-1-data' => 'string', 'col-1-size' => 'default',
-                                       'col-2-data' => 'string', 'col-2-size' => 'default',
-                                       'col-3-data' => 'string', 'col-3-size' => 'default',
-                                       'col-4-data' => 'string', 'col-4-size' => 'default',
-                                       'col-5-data' => 'string', 'col-5-size' => 'default',
-                                       'col-6-data' => 'string', 'col-6-size' => 'default',
-                                       'col-7-data' => 'string', 'col-7-size' => 'default',
-                                       'col-8-data' => 'string', 'col-8-size' => 'default',
-                                       'col-9-data' => 'string', 'col-9-size' => 'default',
-                                       'col-10-data' => 'string', 'col-10-size' => 'default',
-                                       'col-11-data' => 'string', 'col-11-size' => 'default',
-                                       'col-12-data' => 'string', 'col-12-size' => 'default',
-                                       'col-13-data' => 'string', 'col-13-size' => 'default',
-                                       'col-14-data' => 'string', 'col-14-size' => 'default',
-                                       'col-15-data' => 'string', 'col-15-size' => 'default',
-                                       'col-16-data' => 'integer', 'col-16-size' => 'medium',
-                                       'col-17-data' => 'string', 'col-17-size' => 'default',
-                                       'col-18-data' => 'string', 'col-18-size' => 'default',
-                                       'col-19-data' => 'integer', 'col-19-size' => 'big',
-                                       'col-20-data' => 'string', 'col-20-size' => 'big',
-                                       'col-21-data' => 'text', 'col-21-size' => 'default',
-                                       'col-22-data' => 'text', 'col-22-size' => 'medium',
-                                       'col-23-data' => 'string', 'col-23-size' => 'default',
-                                       'col-24-data' => 'string', 'col-24-size' => 'default',
-                                       'col-25-data' => 'string', 'col-25-size' => 'default',
-                                       'col-26-data' => 'string', 'col-26-size' => 'default',
-                                       'col-27-data' => 'string', 'col-27-size' => 'medium',
-                                       'col-28-data' => 'string', 'col-28-size' => 'big',
-                                       'col-29-data' => 'text', 'col-29-size' => 'big',
-                                       'col-30-data' => 'text', 'col-30-size' => 'big',
-                                       'col-31-data' => 'string', 'col-31-size' => 'default' ])
-                ->assertResponseStatus(200)
-                ->see('Load Data')
-                ->press('Load Data')
-                ->see('Table(s)')
-                ->assertResponseStatus(200);
-    }
+          // Generate Collection Name
+          $this->colName = $this->testHelper->generateCollectionName();
+          $this->colName2 = $this->colName+1;
 
-    public function testNonAdminCannotCreateTable() {
-           // try to get to the user(s) page
-           $this->actingAs($this->user)
-                ->get('table')
-                //invalid user gets redirected
-                ->assertResponseStatus(302);
-    }
+          // Generate Table Name
+          $this->tableName = $this->testHelper->createTableName();           
+     }
 
-    public function testFileUploadAndTableCreate() {
-           $tblname = 'importtest'.mt_rand();
-           $path = './storage/app/files/test/';
-           $file = 'test.dat';
+     protected function tearDown(): void {
+          // test tables, files and folders that were created
+          $this->testHelper->cleanupTestTables();
 
-           $this->createTestTable($tblname, $path, $file);
+          // Delete Test Collections
+          $this->testHelper->deleteTestCollections();         
 
-           // test tables, files and folders that were created
-           $this->testHelper->cleanupTestTables([$file]);
-    }
+          parent::tearDown();
+     }     
 
-    public function testCMSSelectFileAndTableCreate() {
-            $path = './storage/app/files/test/';
-            $file = '1A-random.tab';
-            $file2 = '1B-random.tab';
+     public function testTableIndexView() {
+         $this->actingAs($this->admin)
+              ->get('/table')
+              ->assertResponseStatus(200);
+     }    
 
-            $this->testHelper->createCollection('collection1');
+     public function testTableEditView() {
+        // Create Test Collection        
+        $collection = $this->testHelper->createCollection($this->colName, 1, false);
 
-            $storageFolder = 'flatfiles';
+        // Create Test Table
+        $tableName = $this->testHelper->createTestTable($collection);
 
-            $fltFleAbsPth = './storage/app'.'/'.$storageFolder.'/';
+        // get newly created table
+        $table = Table::where('tblNme', $tableName)->first();
 
-            copy($path.$file, $fltFleAbsPth.$file);
-            copy($path.$file2, $fltFleAbsPth.$file2);
+        $this->actingAs($this->admin)
+             ->get('/table/edit/' . $table->id)
+             ->assertResponseStatus(200);
+     }
 
-            $this->actingAs($this->admin)
-                 ->withoutMiddleware()
-                 ->call('POST', route('selectcmsdis'), ['colID2' => 1, 'cmsdisFiles2' => [$file, $file2]]);
+     public function testTableUpdateView() {
+        // Create Test Collection        
+        $collection = $this->testHelper->createCollection($this->colName, 1, false);
 
-            $this->assertEquals(DB::table('tables')->count(), 2);
+        // Create Test Table
+        $tableName = $this->testHelper->createTestTable($collection);
 
-            // test tables, files and folders that were created
-            $this->testHelper->cleanupTestTables([$file, $file2]);
-    }
+        // get newly created table
+        $table = Table::where('tblNme', $tableName)->first();
 
-    public function testCMSSelectInvalidFile() {
-            $path = './storage/app/files/test/';
-            $file = 'images.png';
+        $this->actingAs($this->admin)
+             ->visit('/table/edit/' . $table->id)
+             ->assertResponseStatus(200)
+             ->see('Confirm or Update Table Item(s)')
+             ->see('Update Table')
+             ->see('Name')
+             ->type($this->tableName, 'name')
+             ->press('Update');
 
-            $this->testHelper->createCollection('collection1');
+        // fetch current table
+        $table = Table::where('id', $table->id)->first();
 
-            $storageFolder = 'flatfiles';
+        // check and see if table it was renamed
+        $this->assertEquals($table->tblNme, $this->tableName);
+     } 
+    
+     public function testTableUpdateViewWithUsedName() {
+        // Create Test Collection        
+        $collection = $this->testHelper->createCollection($this->colName, 1, false);
 
-            $fltFleAbsPth = './storage/app'.'/'.$storageFolder.'/';
+        // Create Test Table
+        $tableName1 = $this->testHelper->createTestTable($collection);
 
-            copy($path.$file, $fltFleAbsPth.$file);
+        // Create Test Table 2
+        $tableName2 = $this->testHelper->createTestTable($collection);
 
-            $this->actingAs($this->admin)
-                 ->withoutMiddleware()
-                 ->call('POST', route('selectcmsdis'), ['colID2' => 1, 'cmsdisFiles2' => [$file]]);
+        // get newly created tables
+        $table = Table::where('tblNme', $tableName1)->first();
 
-            $this->assertEquals(DB::table('tables')->count(), 0);
+        $this->actingAs($this->admin)
+             ->visit('/table/edit/' . $table->id)
+             ->assertResponseStatus(200)
+             ->see('Confirm or Update Table Item(s)')
+             ->see('Update Table')
+             ->see('Name')
+             // Try Updating table1 with table 2's Name
+             ->type($tableName2, 'name')
+             ->press('Update');
 
-            // test tables, files and folders that were created
-            $this->testHelper->cleanupTestTables([$file]);
-    }
+        // fetch current table
+        $table = Table::where('id', $table->id)->first();
 
-    public function testInvalidFileTypeUpload() {
-            $tblname = 'importtest'.mt_rand();
-            $path = './storage/app/files/test/';
-            $file = 'images.png';
+        // verify rename failed and we still have our original name
+        $this->assertEquals($table->tblNme, $tableName1);
+     }    
 
-            $this->testHelper->createCollection('collection1');
+     public function testTableUpdateCollection() {
+        // Create Test Collection        
+        $collection = $this->testHelper->createCollection($this->colName, 1, false);
+        $collection2 = $this->testHelper->createCollection($this->colName2, 1, false);        
 
-            $this->actingAs($this->admin)
-                 ->visit('table/create')
-                 ->type($tblname, 'imprtTblNme')
-                 ->type('1', 'colID')
-                 ->attach($path.$file, 'fltFile')
-                 ->press('Import')
-                 ->assertResponseStatus(200)
-                 ->see('The flat file must be a file of type: text/plain.');
+        // Create Test Table
+        $tableName = $this->testHelper->createTestTable($collection);
 
-            // test tables, files and folders that were created
-            $this->testHelper->cleanupTestTables([$file]);
-    }
+        // get newly created tables
+        $table = Table::where('tblNme', $tableName)->first();
 
-    public function testFileExistsUpload() {
-            $tblname = 'importtest'.mt_rand();
-            $tblname2 = 'importtest'.mt_rand();
-            $path = './storage/app/files/test/';
-            $file = 'test.dat';
+        $this->actingAs($this->admin)
+             ->visit('/table/edit/' . $table->id)
+             ->assertResponseStatus(200)
+             ->see('Confirm or Update Table Item(s)')
+             ->see('Update Table')
+             ->see('Select Collection')
+             ->select($collection2->id, 'colID')
+             ->press('Update');
 
-            $this->createTestTable($tblname, $path, $file);
+        // fetch current table
+        $table = Table::where('id', $table->id)->first();
 
-            $this->actingAs($this->admin)
-                 ->visit('table/create')
-                 ->type($tblname2, 'imprtTblNme')
-                 ->type('1', 'colID')
-                 ->attach($path.$file, 'fltFile')
-                 ->press('Import')
-                 ->assertResponseStatus(200)
-                 ->see('File already exists. Please select the file or rename and re-upload.');
+        // verify rename failed and we still have our original name
+        $this->assertEquals($table->collection_id, $collection2->id);
+     }      
 
-            // test tables, files and folders that were created
-            $this->testHelper->cleanupTestTables([$file]);
-    }
+    public function testTableEditSchemaView() {
+        // Create Test Collection        
+        $collection = $this->testHelper->createCollection($this->colName, 1, false);
 
-    public function testCheckFlatFiles() {
+        // Create Test Table
+        $tableName = $this->testHelper->createTestTable($collection);
+
+        // get newly created table
+        $table = Table::where('tblNme', $tableName)->first();
+
+        $this->actingAs($this->admin)
+             ->get('/table/edit/schema/' . $table->id)
+             ->assertResponseStatus(200);
+     }    
+    
+     public function testTableEditSchemaUpdate() {
+        // Create Test Collection        
+        $collection = $this->testHelper->createCollection($this->colName, 1, false);
+
+        // Create Test Table
+        $tableName = $this->testHelper->createTestTable($collection);
+
+        // get newly created table
+        $table = Table::where('tblNme', $tableName)->first();
+
+        $this->actingAs($this->admin)
+             ->visit('/table/edit/schema/' . $table->id)
+             ->assertResponseStatus(200)
+             ->see('Edit Table Schema')
+             ->submitForm('Submit', [ 'col-0-name' => 'index', 'col-0-data' => 'integer', 'col-0-size' => 'big',
+                                   'col-1-name' => 'living_space_sq_ft', 'col-1-data' => 'integer', 'col-1-size' => 'big',
+                                   'col-2-name' => 'beds', 'col-2-data' => 'integer', 'col-2-size' => 'big',
+                                   'col-3-name' => 'baths', 'col-3-data' => 'integer', 'col-3-size' => 'big',
+                                   'col-4-name' => 'zip', 'col-4-data' => 'integer', 'col-4-size' => 'big',
+                                   'col-5-name' => 'year', 'col-5-data' => 'string', 'col-5-size' => 'default',
+                                   'col-6-name' => 'list_price', 'col-6-data' => 'text', 'col-6-size' => 'default'])             
+             ->assertResponseStatus(200);
+
+        $this->actingAs($this->admin)
+             ->visit('/table/edit/schema/' . $table->id)
+             ->assertResponseStatus(200)
+             ->see('string'); 
+     }   
+
+     public function testAdminCanCreateTable() {
+          // Create Test Collection        
+          $collection = $this->testHelper->createCollection($this->colName, 1, false);
+
+          // try to get to the user(s) page
+          $this->actingAs($this->admin)
+               ->get('table/create')
+               ->see('Add Tables');
+     }
+         
+     public function testNonAdminCannotCreateTable() {
+          // try to get to the user(s) page
+          $this->actingAs($this->user)
+               ->get('table/create')
+               ->assertResponseStatus(302);
+     }
+
+     public function testCheckFlatFiles() {
             // test to see if 'test.dat' is available
             // using getFiles
             $filesArray = (new TableController)->getFiles('.');
             $this->assertContains('files/test/test.dat', $filesArray);
-    }
+     } 
 
-    public function testSelect() {
-            $tblname = 'importtest'.mt_rand();
-            $tblname2 = 'importtest'.mt_rand();
-            $path = './storage/app/files/test/';
-            $file = 'test.dat';
+     public function testTableRestrict() {
+          $this->testHelper->createCollectionWithTableAndRecords($this->colName, $this->tableName);
 
-            $this->createTestTable($tblname, $path, $file);
+          // find table by searching on it's name
+          $table = Table::where('tblNme', '=', $this->tableName)->first();
 
-            $this->actingAs($this->admin)
-                 ->visit('table/create#slctPnlBdy')
-                 ->type($tblname2, 'slctTblNme')
-                 ->see('collection1')
-                 ->select($file, 'fltFile2')
-                 ->press('Select')
-                 ->see('Edit Schema')
-                 ->submitForm('Submit', [ 'col-0-data' => 'string', 'col-0-size' => 'default',
-                                          'col-1-data' => 'string', 'col-1-size' => 'default',
-                                          'col-2-data' => 'string', 'col-2-size' => 'default',
-                                          'col-3-data' => 'string', 'col-3-size' => 'default',
-                                          'col-4-data' => 'string', 'col-4-size' => 'default',
-                                          'col-5-data' => 'string', 'col-5-size' => 'default',
-                                          'col-6-data' => 'string', 'col-6-size' => 'default',
-                                          'col-7-data' => 'string', 'col-7-size' => 'default',
-                                          'col-8-data' => 'string', 'col-8-size' => 'default',
-                                          'col-9-data' => 'string', 'col-9-size' => 'default',
-                                          'col-10-data' => 'string', 'col-10-size' => 'default',
-                                          'col-11-data' => 'string', 'col-11-size' => 'default',
-                                          'col-12-data' => 'string', 'col-12-size' => 'default',
-                                          'col-13-data' => 'string', 'col-13-size' => 'default',
-                                          'col-14-data' => 'string', 'col-14-size' => 'default',
-                                          'col-15-data' => 'string', 'col-15-size' => 'default',
-                                          'col-16-data' => 'integer', 'col-16-size' => 'medium',
-                                          'col-17-data' => 'string', 'col-17-size' => 'default',
-                                          'col-18-data' => 'string', 'col-18-size' => 'default',
-                                          'col-19-data' => 'integer', 'col-19-size' => 'big',
-                                          'col-20-data' => 'string', 'col-20-size' => 'big',
-                                          'col-21-data' => 'text', 'col-21-size' => 'default',
-                                          'col-22-data' => 'text', 'col-22-size' => 'medium',
-                                          'col-23-data' => 'string', 'col-23-size' => 'default',
-                                          'col-24-data' => 'string', 'col-24-size' => 'default',
-                                          'col-25-data' => 'string', 'col-25-size' => 'default',
-                                          'col-26-data' => 'string', 'col-26-size' => 'default',
-                                          'col-27-data' => 'string', 'col-27-size' => 'medium',
-                                          'col-28-data' => 'string', 'col-28-size' => 'big',
-                                          'col-29-data' => 'text', 'col-29-size' => 'big',
-                                          'col-30-data' => 'text', 'col-30-size' => 'big',
-                                          'col-31-data' => 'string', 'col-31-size' => 'default' ])
-                 ->assertResponseStatus(200)
-                 ->see('Load Data')
-                 ->press('Load Data')
-                 ->see('Table(s)')
-                 ->assertResponseStatus(200);
-
-            // test tables, files and folders that were created
-            $this->testHelper->cleanupTestTables([$file]);
-    }
-
-    public function testSelectAndCreateTableThenDisable() {
-            $tblname = 'importtest'.mt_rand();
-            $path = './storage/app/files/test/';
-            $file = 'test.dat';
-
-            $this->createTestTable($tblname, $path, $file);
-
-            // find table by searching on it's name
-            $table = Table::where('tblNme', '=', $tblname)->first();
-
-            // While using a admin account try to disable a table
-            $this->actingAs($this->admin)
-                 ->withoutMiddleware()
-                 ->post('table/restrict', [ 'id' => $table->id ]);
-            $table = Table::where('tblNme', '=', $tblname)->first();
-            $this->assertEquals('0', $table->hasAccess);
-
-            // test tables, files and folders that were created
-            $this->testHelper->cleanupTestTables([$file]);
-    }
-
-    public function testCMSImportFileUploadAndTableCreate() {
-           $path = './storage/app/files/test/';
-           $file = '1A-random.tab';
-           $file2 = '1B-random.tab';
-
-           $this->testHelper->createCollection('collection1');
-
-           copy($path.$file, sys_get_temp_dir().'/'.$file);
-           copy($path.$file2, sys_get_temp_dir().'/'.$file2);
-
-           $files = [new \Illuminate\Http\UploadedFile(sys_get_temp_dir().'/'.$file, $file, 'application/octet-stream', filesize($path.$file), null, false),
-                     new \Illuminate\Http\UploadedFile(sys_get_temp_dir().'/'.$file2, $file2, 'application/octet-stream', filesize($path.$file2), null, false)];
-
-           $this->actingAs($this->admin)
-                ->withoutMiddleware()
-                ->call('POST', route('importcmsdis'), ['colID' => 1, 'cmsdisFiles' => $files]);
-
-           $this->assertEquals(DB::table('tables')->count(), 2);
-
-           // test tables, files and folders that were created
-           $this->testHelper->cleanupTestTables([$file, $file2]);
-    }
-
-    public function testCMSImportInvalidFileUploadAndTableCreate() {
-           $path = './storage/app/files/test/';
-           $file = 'images.png';
-
-           $this->testHelper->createCollection('collection1');
-
-           copy($path.$file, sys_get_temp_dir().'/'.$file);
-
-           $files = [new \Illuminate\Http\UploadedFile(sys_get_temp_dir().'/'.$file, $file, 'application/octet-stream', filesize($path.$file), null, false)];
-
-           $response = $this->actingAs($this->admin)
-                ->withoutMiddleware()
-                ->call('POST', route('importcmsdis'), ['colID' => 1, 'cmsdisFiles' => $files]);
-
-           $this->assertEquals(DB::table('tables')->count(), 0);
-
-           // test tables, files and folders that were created
-           $this->testHelper->cleanupTestTables([$file]);
-    }
-
-    public function testCMSImportExistingFile() {
-           $path = './storage/app/files/test/';
-           $file = '1A-random.tab';
-
-           $this->testHelper->createCollection('collection1');
-
-           copy($path.$file, './storage/app/flatfiles/'.$file);
-
-           copy($path.$file, sys_get_temp_dir().'/'.$file);
-
-           $files = [new \Illuminate\Http\UploadedFile(sys_get_temp_dir().'/'.$file, $file, 'application/octet-stream', filesize($path.$file), null, false)];
-
-           $response = $this->actingAs($this->admin)
-                ->withoutMiddleware()
-                ->call('POST', route('importcmsdis'), ['colID' => 1, 'cmsdisFiles' => $files]);
-
-           $this->assertEquals(DB::table('tables')->count(), 0);
-
-           // test tables, files and folders that were created
-           $this->testHelper->cleanupTestTables([$file]);
-    }
+          // While using a admin account try to disable a table
+          $this->actingAs($this->admin)
+               ->withoutMiddleware()
+               ->post('table/restrict', [ 'id' => $table->id ]);
+          $table = Table::where('tblNme', '=', $this->tableName)->first();
+          $this->assertEquals('0', $table->hasAccess);          
+     }
 
   }

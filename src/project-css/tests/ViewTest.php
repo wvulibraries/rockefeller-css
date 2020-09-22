@@ -6,7 +6,6 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 
 class ViewTest extends BrowserKitTestCase
 {
-
     private $adminEmail;
     private $adminPass;
     private $userName;
@@ -15,7 +14,7 @@ class ViewTest extends BrowserKitTestCase
 
     public function setUp(): void {
         parent::setUp();
-        Artisan::call('migrate:refresh --seed');
+        //Artisan::call('migrate:refresh --seed');
 
         //admin credentials
         $this->adminEmail = "admin@admin.com";
@@ -28,7 +27,7 @@ class ViewTest extends BrowserKitTestCase
     }
 
      protected function tearDown(): void {
-          Artisan::call('migrate:rollback');
+          //Artisan::call('migrate:rollback');
           parent::tearDown();
      }  
 

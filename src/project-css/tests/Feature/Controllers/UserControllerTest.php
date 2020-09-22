@@ -1,5 +1,5 @@
 <?php
-  # app/tests/controllers/HomeControllerTest.php
+  # app/tests/controllers/UserControllerTest.php
 
   use App\Models\User;
 
@@ -10,16 +10,10 @@
 
     public function setUp(): void {
          parent::setUp();
-         Artisan::call('migrate:refresh --seed');
 
          // find admin and test user accounts
          $this->admin = User::where('name', '=', 'admin')->first();
          $this->user = User::where('name', '=', 'test')->first();
-    }
-
-    protected function tearDown(): void {
-         Artisan::call('migrate:reset');
-         parent::tearDown();
     }
 
     public function testDatabase()

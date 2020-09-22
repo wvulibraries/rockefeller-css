@@ -1,8 +1,4 @@
 <?php
-/**
- * @author Ajay Krishna Teja Kavur
- * @author Tracy A McCormick <tam0013@mail.wvu.edu>
- */
 
 namespace App\Http\Controllers;
 
@@ -11,8 +7,12 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Jobs;
 use Auth;
 
-// Jobs Controller manages the file import that loads data into the tables.
-
+/**
+ * Jobs Controller manages the file import that loads data into the tables.
+ * 
+ * @author Ajay Krishna Teja Kavur
+ * @author Tracy A McCormick <tam0013@mail.wvu.edu>
+ */
 class JobsController extends Controller
 {
     public function __construct() {
@@ -21,8 +21,11 @@ class JobsController extends Controller
     }
 
     /**
-    * Return the pending jobs page
-    */
+     * Return the pending jobs page
+     *
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response
+     */ 
     public function pending() {
         return view('admin/jobs/pending')->with('AuthUsr', Auth::user())
                                  ->with('JobCount', Jobs::getPendingJobsCount())
@@ -30,8 +33,11 @@ class JobsController extends Controller
     }
 
     /**
-    * Return the failed jobs page
-    */
+     * Return the failed jobs page
+     *
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response
+     */ 
     public function failed() {
         return view('admin/jobs/failed')->with('AuthUsr', Auth::user())
                                  ->with('JobCount', Jobs::getFailedJobsCount())
@@ -42,8 +48,10 @@ class JobsController extends Controller
      * Calls the model function to retry specific job from the table.
      *
      * @param  int  $id
-     * @return view listing failed jobs.
-     */
+     *
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response (listing failed jobs)
+     */ 
     public function retry($id) {
         Jobs::retryFailedJob($id);
         return $this->failed();
@@ -52,8 +60,9 @@ class JobsController extends Controller
     /**
      * Calls the model function to retry all failed jobs from the table.
      *
-     * @return view listing failed jobs.
-     */
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response (listing failed jobs)
+     */ 
     public function retryAll() {
         Jobs::retryAllFailedJobs();
         return $this->failed();
@@ -63,8 +72,10 @@ class JobsController extends Controller
      * Calls the model function to clear specific job from the table.
      *
      * @param  int  $id
-     * @return view listing failed jobs.
-     */
+     *
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response (listing failed jobs)
+     */ 
     public function forget($id) {
         Jobs::forgetFailedJob($id);
         return $this->failed();
@@ -73,8 +84,9 @@ class JobsController extends Controller
     /**
      * Calls the model function to clear all failed jobs from the table.
      *
-     * @return view listing failed jobs.
-     */
+     * @author Tracy A McCormick
+     * @return \Illuminate\Http\Response (listing failed jobs)
+     */ 
     public function flush() {
         Jobs::forgetAllFailedJobs();
         return $this->failed();

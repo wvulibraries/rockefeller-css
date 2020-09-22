@@ -41,15 +41,18 @@ Route::view('/help', 'help');
 
 /*
 |--------------------------------------------------------------------------
-| Controller for the admin dashboard page
+| Controller for the admin collection page
 |--------------------------------------------------------------------------
 */
 Route::get('collection', 'CollectionController@index')->name('collection.index');
 Route::group([ 'prefix' => 'collection' ], function() {
     Route::post('create', 'CollectionController@create')->name('collection.create');
     Route::post('edit', 'CollectionController@edit')->name('collection.edit');
-    Route::post('disable', 'CollectionController@disable')->name('collection.disable');;
-    Route::post('enable', 'CollectionController@enable')->name('collection.enable');;
+    Route::get('show/{colID}', 'CollectionController@show')->name('collection.show'); 
+    Route::get('upload/{colID}', 'CollectionController@upload')->name('collection.upload');
+    Route::get('{colID}/table/create', 'CollectionController@tableCreate')->name('collection.table.create'); 
+    Route::post('disable', 'CollectionController@disable')->name('collection.disable');
+    Route::post('enable', 'CollectionController@enable')->name('collection.enable');
 });
 
 /*
@@ -59,20 +62,38 @@ Route::group([ 'prefix' => 'collection' ], function() {
 */
 Route::get('table', 'TableController@index')->name('tableIndex');
 Route::group([ 'prefix' => 'table' ], function() {
-    Route::get('create', 'TableController@wizard');
-    Route::post('create/import', 'TableController@import');
-    Route::post('create/importcmsdis', 'TableController@importCMSDIS')->name('importcmsdis');
-    Route::post('create/select', 'TableController@select');
-    Route::post('create/selectCMSDIS', 'TableController@selectCMSDIS')->name('selectcmsdis');
+    Route::get('edit/{curTable}', 'TableController@edit')->name('table.edit');
+    Route::post('update', 'TableController@update');
+
+    Route::get('edit/schema/{curTable}', 'TableController@editSchema')->name('table.edit.schema');
+    Route::post('update/schema', 'TableController@updateSchema');
+    Route::get('create', 'TableController@create');
+
     // Forward route in case for error
-    Route::get('create/select', 'TableController@wizard');
     Route::post('create/finalize', 'TableController@finalize');
     Route::get('load', 'TableController@load');
-    Route::post('load/worker', 'TableController@worker');
     Route::post('load/store', 'TableController@store');
-    Route::post('load/status', 'TableController@status');
     Route::post('restrict', 'TableController@restrict');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Controller for the import wizard
+|--------------------------------------------------------------------------
+*/
+Route::group([ 'prefix' => 'admin/wizard' ], function() {
+    Route::get('import/collection/{colID}', 'WizardController@importCollection')->name('wizard.import.collection');
+
+    Route::get('flatfile', 'WizardController@flatfile')->name('wizard.flatfile');
+    Route::post('flatfile/upload', 'WizardController@flatfileUpload')->name('wizard.flatfile.upload');
+    Route::post('flatfile/select', 'WizardController@flatfileSelect')->name('wizard.flatfile.select');  
+    
+    Route::get('cms', 'WizardController@cms')->name('wizard.cms');
+    Route::post('cms/upload', 'WizardController@cmsUpload')->name('wizard.cms.upload');
+    Route::post('cms/select', 'WizardController@cmsSelect')->name('wizard.cms.select');    
+});
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -108,21 +129,30 @@ Route::group([ 'middleware' => [ 'checktableid' ] ], function() {
       Route::get('{curTable}/{recId}/view/{filename}', 'DataViewController@view')->name('dataFileView');
   });
 
+});
+
+/*
+|--------------------------------------------------------------------------
+| checkcollectionid middleware group for checking for a valid collection id
+|--------------------------------------------------------------------------
+*/
+Route::group([ 'middleware' => [ 'checkcollectionid' ] ], function() {
+
   /*
   |--------------------------------------------------------------------------
-  | Controller for managing file uploads to tables
+  | Controller for managing file uploads to collections
   |--------------------------------------------------------------------------
   */
   Route::group([ 'prefix' => 'upload' ], function() {
-      Route::get('{curTable}', 'UploadController@index');
-      Route::post('{curTable}', 'UploadController@storeFiles');
+      Route::get('{curCol}', 'UploadController@index');
+      Route::post('{curCol}', 'UploadController@storeFiles');
   });
 
 });
 
 /*
 |--------------------------------------------------------------------------
-| Admin Controller for various admin functions
+| Admin Jobs Controller for displaying and managing the Job queue
 |--------------------------------------------------------------------------
 */
 Route::group([ 'prefix' => 'admin/jobs' ], function() {
